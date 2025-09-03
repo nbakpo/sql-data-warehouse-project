@@ -50,3 +50,13 @@ it consists of dimension and fact tables for specific business metrics.
 | sales_amount | INT | The total monetary value of the sale for the line item, in whole currency units(e.g. 25).  |
 | quantity | INT | The number of units of the product ordered for the line item (e.g. 1). |
 | price | INT | The price per unit of the product for the line item, in whole currency units (e.g. 25). |
+
+# Example Table
+
+| Name      | Age | Country   |
+|-----------|-----|-----------|
+| Alice     | 24  | USA       |
+| Bob       | 30  | Canada    |
+| Charlie   | 28  | UK        |
+| Diana     | 22  | Nigeria   |
+
