@@ -7,7 +7,7 @@ Script Purpose:
   if they already exist.
 Run this script to redefine the DDL structure of the 'bronze' tables
 ===================================================================
-
+*/ 
 -- Create Tables for bronze layer
 
 -- Table for customer information
