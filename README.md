@@ -28,7 +28,7 @@ Develop SQL-based analytics to deliver detailed insights into:
 
 These insights empower stakeholders with key business metrics, enabling strategic decision-making. 
 
-![Data Warehouse Diagram](images/DATA Architecture.png)
+![Data Architecture](./images/DATA%20Architecture.png)
 
 About Me
 Hello, Im Nenubari Bakpo, I am a preprofessional learning and applying my skills into some professional projects!
