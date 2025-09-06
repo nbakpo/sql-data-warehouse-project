@@ -57,7 +57,7 @@ SELECT
   pn.prd_start_dt as start_date
 from silver.crm_prd_info pn  
 Left Join silver.erp_px_cat_g1v2  pc
-on pn.prd_key = pc.id 
+on pn.cat_id = pc.id 
 -- Filter to get only active products
 Where prd_end_dt is NULL
 
