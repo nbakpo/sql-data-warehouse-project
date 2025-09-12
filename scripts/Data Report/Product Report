@@ -1,0 +1,104 @@
+/*
+=========================================================================
+Product Report
+=========================================================================
+Purpose:
+  - This report consolidates key product metrics and behaviors.
+
+Highlights:
+  1. Gathers essential fields such as product name, category, subcategory, and cost.
+  2. Segments products by revenue to identify High-Performers, Mid-Range, or Low-performers.
+  3. Aggregates product-level metrics: 
+    - total orders
+    - total sales
+    - total quantity sold
+    - total customers(unique)
+    - lifespan (in months)
+  4. Calculates valuable KPIs:
+    - recency (months since last order)
+    - average order revenue(AOR)
+    - average monthly revenue
+==========================================================================
+*/
+Create View gold.report_products as
+ With base_query as(
+/*---------------------------------------------------------------------------------------
+   1.)Base Query: Joins 2 tables to get necessary fields.
+---------------------------------------------------------------------------------------*/ 
+Select 
+    fs.order_number,
+    fs.order_date,
+    fs.customer_key,
+    fs.sales_amount,
+    fs.quantity,
+    dp.product_key,
+    dp.product_name,
+    dp.category,
+    dp.sub_category,
+    dp.product_cost
+    from gold.fact_sales fs
+    Left Join gold.dim_products dp
+    on fs.product_key = dp.product_key
+    where order_date is not null -- Ensures valid order dates
+ ),
+  product_aggregations as(
+/*---------------------------------------------------------------------------------------
+    2.) Product Aggregations: Summarizes key product metrics and behaviors.
+---------------------------------------------------------------------------------------*/
+Select 
+    product_key,
+    product_name,
+    category,
+    sub_category,
+    product_cost,
+    Datediff(month, min(order_date), max(order_date)) as lifespan,
+    Max(order_date) as last_order_date,
+    Count(Distinct order_number) as total_orders,
+    Count(Distinct customer_key) as total_customers,
+    Sum(sales_amount) as total_sales,
+    Sum(quantity) as total_quantity,
+    -- Gives the average selling price per product
+    Round(Avg(cast(sales_amount as Float) / Nullif(quantity,0)),1) as avg_selling_price
+    From base_query
+    Group by product_key, 
+    product_name, 
+    category, 
+    sub_category, 
+    product_cost
+  )
+
+/*---------------------------------------------------------------------------------------
+    3.) Final Query: Combines all product results into a single output.
+---------------------------------------------------------------------------------------*/
+  Select
+    product_key,
+    product_name,
+    category,
+    sub_category,
+    product_cost,
+    lifespan,
+    last_order_date,
+    -- Compute KPI: Recency (in months)
+    Datediff(month, last_order_date, getdate()) as recency_in_months,
+    -- Product Segment based on total sales
+    Case 
+    When total_sales >= 50000 then 'High-Performer'
+    When total_sales >= 10000 then 'Mid-Range'
+    Else 'Low-Performer'
+    End as product_segment,
+    total_orders,
+    total_customers,
+    total_sales,
+    total_quantity,
+    avg_selling_price,
+    -- Compute KPI: Average Order Revenue (AOR)
+    Case 
+    When total_orders = 0 then 0
+    Else total_sales / total_orders
+    End as avg_order_revenue,
+    -- Compute KPI: Average Monthly Revenue
+    Case 
+    When lifespan = 0 then total_sales
+    Else total_sales / lifespan
+    End as avg_monthly_revenue
+    from product_aggregations
