@@ -1,0 +1,288 @@
+/*====================================================================================================
+  Exploring the database tables
+   In this script, we will explore the database tables to understand the data better.
+   We will look at the dimensions, measures, and other relevant information.
+  
+- Six types of explorations for EDA
+      1.) Database Exploration
+      2.) Dimensions Exploration
+      3.) Date Exploration
+      4.) Measures Exploration
+      5.) Magnitude Exploration
+      6.) Ranking Analysis
+======================================================================================================*/
+-- Exploratory Data Analysis (EDA) on the Database
+-----------------------------------------------------
+
+--===============================================
+--Database Exploration
+--===============================================
+-- Explore All Objects in the Database
+Select 
+  * 
+  From information_schema.tables 
+
+-- Explore All Columns in the Database
+Select 
+  * 
+  From information_schema.columns 
+  Where table_name = 'dim_customers'
+
+--===============================================
+--Dimensions Exploration
+--===============================================
+
+-- Explore all countries our customers come from.
+Select Distinct 
+  country 
+  From gold.dim_customers
+
+--Explore All Categories of Products we sell
+Select Distinct 
+  category, 
+  sub_category, 
+  product_name
+  From gold.dim_products
+  order by 1,2,3
+
+--===============================================
+-- Date Exploration
+--===============================================
+
+-- Find the date of the first and last order
+Select 
+  min(order_date) as first_order_date,
+  max(order_date) as last_order_date 
+  From gold.fact_sales
+
+-- How many years of sales do we have?
+Select 
+  year(min(order_date)) as first_order_year,
+  year(max(order_date)) as last_order_year,
+  DATEDIFF(year, min(order_date), max(order_date)) as total_years
+  From gold.fact_sales
+
+-- Find the youngest and the oldest customer
+Select 
+  * 
+  From(
+Select Top 1
+   first_name, last_name, birthdate,
+   DATEDIFF(year, birthdate, GETDATE()) as age,
+   'Youngest' as label
+   From gold.dim_customers
+   where birthdate is not null
+   order by birthdate desc) as youngest
+Union all
+Select 
+  * 
+  From(
+Select Top 1
+    first_name, last_name, birthdate,
+    DATEDIFF(year, birthdate, GETDATE()) as age,
+    'Oldest' as label
+    From gold.dim_customers
+    where birthdate is not null
+    order by birthdate asc) as oldest;
+
+--===============================================
+-- Measures Exploration
+--===============================================
+
+-- Find the Total Sales
+Select 
+  sum(sales_amount) as total_sales
+  From gold.fact_sales;
+-- Find how many items are sold
+Select 
+  sum(quantity) as total_items_sold
+  From gold.fact_sales;
+-- Find the average selling price
+Select 
+  avg(price) as avg_price
+  From gold.fact_sales;
+-- Find the total number of orders
+Select 
+  count(distinct order_number) as total_orders
+  From gold.fact_sales;
+-- Find the total number of products
+Select 
+count(distinct product_key) as total_products
+  From gold.dim_products;
+-- find the total number of customers
+Select 
+  count(distinct customer_key) as total_customers 
+  From gold.dim_customers;
+-- find the total number of customers that has placed an order
+Select 
+  count(distinct customer_key) as total_customers_with_orders
+  From gold.fact_sales;
+
+
+-- Generate a Report that shows all key metrics of the business
+Select 
+  'Total Sales' as measure_name, sum(sales_amount) as measure_value 
+  From gold.fact_sales
+Union all
+Select 
+  'Total Items Sold' as measure_name, sum(quantity) as measure_value 
+  From gold.fact_sales
+Union all
+Select 
+  'Average Price' as measure_name, avg(price) as measure_value 
+  From gold.fact_sales
+Union all
+Select 
+  'Total Orders' as measure_name, 
+  count(distinct order_number) as measure_value 
+  From gold.fact_sales
+Union all
+Select 
+  'Total Products' as measure_name, 
+  count(distinct product_key) as measure_value 
+  From gold.dim_products
+Union all
+Select 
+  'Total Customers' as measure_name, 
+  count(distinct customer_key) as measure_value 
+  From gold.dim_customers
+Union all
+  Select 
+  'Total Customers with Orders' as measure_name, 
+  count(distinct customer_key) as measure_value 
+  From gold.fact_sales;
+
+--===============================================
+-- Magnitude Exploration
+--===============================================
+
+-- Find total customers by country
+Select 
+  country, 
+  count(customer_key) as total_customers
+  From gold.dim_customers
+  group by country 
+  order by total_customers desc;
+
+-- Find total customers by gender
+Select 
+  gender, 
+  count(customer_key) as total_customers
+  From gold.dim_customers
+  group by gender
+  order by total_customers desc;
+
+-- Find total products by category
+Select 
+  category, 
+  count(product_key) as total_products
+  From gold.dim_products
+  group by category
+  order by total_products desc;
+
+-- What are the average costs in each category?
+Select 
+  category, 
+  avg(product_cost) as avg_cost
+  From gold.dim_products
+  group by category
+  order by avg_cost desc;
+
+-- What is the total revenue generated for each category? 
+Select 
+  dp.category,
+  sum(fs.sales_amount) as total_revenue
+  From gold.fact_sales fs
+  Left Join gold.dim_products dp
+  on fs.product_key = dp.product_key
+  group by dp.category
+  order by total_revenue desc;
+
+-- Find the total revenue that is generated by each customer
+Select 
+  c.customer_key,
+  c.first_name,
+  c.last_name,
+  sum(fs.sales_amount) as total_revenue
+  From gold.fact_sales fs
+  Left Join gold.dim_customers c
+  on fs.customer_key = c.customer_key
+  group by c.customer_key, c.first_name, c.last_name
+  order by total_revenue desc;
+
+-- What is the distribution of sold items across countries?
+Select 
+  c.country,
+  sum(fs.quantity) as total_items_sold
+  from gold.fact_sales fs
+  Left Join gold.dim_customers c
+  on fs.customer_key = c.customer_key
+  group by c.country
+  order by total_items_sold desc;
+
+--===============================================
+--Ranking Analysis
+--===============================================
+
+-- Which 5 products are generating the most revenue?
+Select Top 5
+  dp.product_name,
+  sum(fs.sales_amount) as total_revenue
+  From gold.fact_sales fs
+  Left Join gold.dim_products dp
+  on fs.product_key = dp.product_key
+  group by dp.product_name
+  order by total_revenue desc;
+
+-- Which 5 products are generating the most revenue? Using the Window Function
+Select 
+  * 
+  From (
+Select  
+    dp.product_name,
+    sum(fs.sales_amount) as total_revenue,
+    row_number() over (order by sum(fs.sales_amount) desc) as product_rank
+    From gold.fact_sales fs 
+    Left Join gold.dim_products dp
+    on fs.product_key = dp.product_key
+    group by dp.product_name)t
+    Where product_rank <= 5
+
+-- Which 5 products are generating the least revenue?
+Select Top 5
+  dp.product_name,
+  sum(fs.sales_amount) as total_revenue
+  From gold.fact_sales fs
+  Left Join gold.dim_products dp
+  on fs.product_key = dp.product_key
+  group by dp.product_name
+  order by total_revenue;
+
+-- Find the top 10 customers who have generated the most revenue
+Select 
+  * 
+  From (
+Select 
+    c.customer_key,
+    c.first_name,
+    c.last_name,
+    sum(fs.sales_amount) as total_revenue, 
+    row_number() over (order by sum(fs.sales_amount) desc) as customer_rank
+    From gold.fact_sales fs
+    Left Join gold.dim_customers c
+    on fs.customer_key = c.customer_key
+    group by c.customer_key, c.first_name, c.last_name)t
+    Where customer_rank <= 10
+
+-- Find the 3 customers who have the fewest orders placed
+select * from (
+    select c.customer_key,
+    c.first_name,
+    c.last_name,
+    count(distinct order_number) as total_orders, 
+    row_number() over (order by count(distinct order_number)) as customer_rank
+    From gold.fact_sales fs
+    Left Join gold.dim_customers c
+    on fs.customer_key = c.customer_key
+    group by c.customer_key, c.first_name, c.last_name)t
+    Where customer_rank <= 3
