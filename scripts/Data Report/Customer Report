@@ -20,24 +20,81 @@ Highlights:
     - average monthly spend
 ==========================================================================
 */
+Create View gold.report_customers as
+  With base_query as (
 /*----------------------------------------------------------------------------
 1.) Base Query: Retrieves core columns from tables
 -----------------------------------------------------------------------------*/
 Select
-fs.order_number,
-fs.product_key,
-fs.order_date,
-fs.sales_amount,
-fs.quantity,
-dc.customer_key,
-dc.customer_number,
-dc.first_name,
-dc.last_name,
-dc.birthdate
-From gold.fact_sales fs
-Left Join gold.dim_customers dc
-on dc.customer_key = fs.customer_key 
-Where order_date is not Null 
-  
-
-
+  fs.order_number,
+  fs.product_key,
+  fs.order_date,
+  fs.sales_amount,
+  fs.quantity,
+  dc.customer_key,
+  dc.customer_number,
+  concat(dc.first_name, ' ', dc.last_name) as customer_name,
+  datediff(year, dc.birthdate, getdate()) as age
+  From gold.fact_sales fs
+  Left Join gold.dim_customers dc
+  on dc.customer_key = fs.customer_key 
+  Where order_date is not Null),
+  customer_aggregation as (
+/*----------------------------------------------------------------------------
+2.) Customer Aggregations: Summarizes key metrics at the customer level
+-----------------------------------------------------------------------------*/
+Select 
+  customer_key,
+  customer_number,
+  customer_name,
+  age, 
+  Count(Distinct order_number) as total_orders,
+  Sum(sales_amount) as total_sales,
+  Sum(quantity) as total_quantity,
+  Count(Distinct product_key) as total_products,
+  Max(order_date) as last_order_date,
+  datediff(month, Min(order_date), Max(order_date)) as lifespan
+  From base_query
+  Group by 
+  customer_key,
+  customer_number,
+  customer_name,
+  age
+  )
+/*---------------------------------------------------------------------------------------
+    3.) Final Query: Combines all customer results into a single output.
+---------------------------------------------------------------------------------------*/
+Select 
+  customer_key,
+  customer_number,
+  customer_name,
+  age,
+  Case 
+  When age < 20 Then 'Under 20'
+  When age between 20 and 29 Then '20-29'
+  When age between 30 and 39 Then '30-39'
+  When age between 40 and 49 Then '40-49'
+  Else '50+'
+  End as age_group,
+  Case 
+  When lifespan >= 12 and total_sales > 5000 then 'VIP'
+  When lifespan >= 12 and total_sales <= 5000 then 'Regular'
+  Else 'New'
+  End as customer_segment,
+  last_order_date,
+  -- Compute KPI: recency (months since last order)
+  Datediff(month, last_order_date, getdate()) as recency,
+  total_orders,
+  total_sales,
+  total_quantity,
+  total_products,
+  lifespan,
+  -- Compute KPI: average order value (AVO)
+  Case When total_orders = 0 Then 0
+  Else total_sales / total_orders 
+  End as avg_order_value,
+  -- Compute KPI: average monthly spend
+  Case When lifespan = 0 Then total_sales
+  Else total_sales / lifespan 
+  End as avg_monthly_spend
+  From customer_aggregation
