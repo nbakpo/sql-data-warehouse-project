@@ -7,7 +7,7 @@ Script Purpose:
   if they already exist.
 Run this script to redefine the DDL structure of the 'silver' tables
 ===================================================================
-
+*/
 -- Create Tables for silver layer
 
 -- Table for customer information
