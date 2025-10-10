@@ -173,10 +173,10 @@ BEGIN
         -- replace '-' From cid 
         replace(cid, '-', '') as cid,
         -- standardize country names
-        Case When left(cntry, len(trim(cntry))-1) = 'DE' Then 'Germany'
-        When left(cntry, len(cntry)-1) in ('US', 'USA') Then 'United States'
-        When left(cntry, len(trim(cntry))-1) = '' or cntry is NULL Then 'n/a'
-        Else left(cntry, len(trim(cntry))-1)
+        Case When left(cntry, len(trim(cntry)) = 'DE' Then 'Germany'
+        When left(cntry, len(cntry) in ('US', 'USA') Then 'United States'
+        When left(cntry, len(trim(cntry) = '' or cntry is NULL Then 'n/a'
+        Else left(cntry, len(trim(cntry)
         End as cntry
         From bronze.erp_loc_a10 
         SET @end_time = GETDATE();
@@ -227,9 +227,9 @@ BEGIN
         End bdate,
         -- Normalize gender values and handle unknown Cases
         Case When 
-        Upper(left(trim(gen), len(gen)-1)) in ('M', 'MALE') Then 'Male'
+        Upper(left(trim(gen), len(gen) in ('M', 'MALE') Then 'Male'
         When 
-        Upper(left(trim(gen), len(gen)-1)) in ('F', 'FEMALE') Then 'Female'
+        Upper(left(trim(gen), len(gen) in ('F', 'FEMALE') Then 'Female'
         Else 'n/a'
         End gen
         From bronze.erp_cust_az12
